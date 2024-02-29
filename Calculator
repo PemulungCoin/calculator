@@ -1,0 +1,34 @@
+import requests
+from flask import Flask, render_template, request
+
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/calculate", methods=["POST"])
+def calculate():
+    # Get the user input.
+    amount = request.form.get("amount")
+    currency = request.form.get("currency")
+
+    # Get the latest BTC and USDT prices from CoinMarketCap.
+    response = requests.get("https://api.coinmarketcap.com/v1/ticker/bitcoin,tether/")
+    data = response.json()
+
+    # Calculate the value of BTC in USDT.
+    btc_price = data[0]["price_usd"]
+    usdt_price = data[1]["price_usd"]
+    value_in_usdt = float(amount) * btc_price / usdt_price
+
+    # Convert the value to the user's selected currency.
+    if currency != "USD":
+        conversion_rate = requests.get("https://api.exchangerate-api.com/v4/latest/USD/" + currency).json()["rates"][currency]
+        value_in_selected_currency = value_in_usdt * conversion_rate
+
+    # Render the results page.
+    return render_template("results.html", amount=amount, currency=currency, value_in_usdt=value_in_usdt, value_in_selected_currency=value_in_selected_currency)
+
+if __name__ == "__main__":
+    app.run(debug=True)
